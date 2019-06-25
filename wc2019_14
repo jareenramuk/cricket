@@ -1,0 +1,65 @@
+import pandas as pd
+table = pd.DataFrame
+
+np.array(a).T.tolist()
+
+m0=[11,10,9,8,7,6,5,3,3,0]
+m1=[[0,2,0,0,0,0,0,0,0,0],
+    [0,0,0,2,0,0,0,0,0,0]]
+m2=[[2,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0]]
+m3=[[0,0,0,0,0,0,0,2,0,0],
+    [0,0,2,0,0,0,0,0,0,0]]
+m4=[[0,0,0,0,0,0,0,0,2,0],
+    [0,0,0,0,0,2,0,0,0,0]]
+m5=[[0,0,0,0,0,0,2,0,0,0],
+    [0,0,0,0,0,0,0,0,0,2]]
+m6=[[2,0,0,0,0,0,0,0,0,0],
+    [0,2,0,0,0,0,0,0,0,0]]
+m7=[[0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,2,0,0,0,0,0,0]]
+m8=[[0,0,0,0,0,2,0,0,0,0],
+    [0,0,0,0,0,0,0,2,0,0]]
+m9=[[0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0]]
+m10=[[2,0,0,0,0,0,0,0,0,0],
+     [0,0,0,2,0,0,0,0,0,0]]
+m11=[[0,0,0,0,0,0,0,0,0,2],
+     [0,0,0,0,0,0,0,2,0,0]]
+m12=[[0,0,0,0,2,0,0,0,0,0],
+     [0,0,0,0,0,0,2,0,0,0]]
+m13=[[0,0,2,0,0,0,0,0,0,0],
+     [0,0,0,0,0,2,0,0,0,0]]
+m14=[[0,2,0,0,0,0,0,0,0,0],
+     [0,0,0,0,0,0,0,0,2,0]]
+
+z = [m0,m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11,m12,m13,m14]   
+
+
+col_total=[[0,0,0,0,0,0,0,0,0,0]]
+for t1 in m1:
+    for t2 in m2:
+        for t3 in m3:
+            for t4 in m4:  
+                for t5 in m5:
+                    for t6 in m6:
+                        for t7 in m7:
+                            for t8 in m8:
+                                for t9 in m9:
+                                    for t10 in m10:
+                                        for t11 in m11:
+                                            for t12 in m12:
+                                                for t13 in m13:
+                                                    for t14 in m14:
+                                                        my_list=[m0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14]
+                                                        col_total.append([ sum(x) for x in zip(*my_list)])
+
+table=pd.DataFrame(data=col_total)
+my_columns = ['nz','as','in','en','bn','sl','pk','wi','sf','af']
+table.columns = my_columns
+table=table.drop(table.index[0])
+rank=table.rank(axis=1,ascending=False,method='average')
+
+permut= pd.DataFrame(np.where(rank<=4,1,0))
+permut.columns = my_columns
+km=permut.sum()/permut.count()
