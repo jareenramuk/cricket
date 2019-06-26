@@ -1,8 +1,28 @@
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
+
+This is a temporary script file.
+"""
+
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+sia = SentimentIntensityAnalyzer()
+passage1 = 'Modi hates her'
+passage2 = 'Modi dislikes her'
+print('sentiment score',sia.polarity_scores(passage1))
+print('sentiment score',sia.polarity_scores(passage2))
+
+passage3='4 years after Narendra Modi came to power, India has the maximum number of unemployed people in the world!'
+print('sentiment score',sia.polarity_scores(passage3))
+
+
+
 import pandas as pd
 table = pd.DataFrame
 
-np.array(a).T.tolist()
-
+#np.array(a).T.tolist()
+#pre 14 matches
 m0=[11,10,9,8,7,6,5,3,3,0]
 m1=[[0,2,0,0,0,0,0,0,0,0],
     [0,0,0,2,0,0,0,0,0,0]]
@@ -32,11 +52,14 @@ m13=[[0,0,2,0,0,0,0,0,0,0],
      [0,0,0,0,0,2,0,0,0,0]]
 m14=[[0,2,0,0,0,0,0,0,0,0],
      [0,0,0,0,0,0,0,0,2,0]]
+#post matches
+
 
 z = [m0,m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11,m12,m13,m14]   
 
-
+m1=[[0,2,0,0,0,0,0,0,0,0]]
 col_total=[[0,0,0,0,0,0,0,0,0,0]]
+winner=[[0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
 for t1 in m1:
     for t2 in m2:
         for t3 in m3:
@@ -53,13 +76,53 @@ for t1 in m1:
                                                     for t14 in m14:
                                                         my_list=[m0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14]
                                                         col_total.append([ sum(x) for x in zip(*my_list)])
+                                                        winner.append([t1.index(2),t2.index(2),t3.index(2),t4.index(2),t5.index(2),t6.index(2),t7.index(2),t8.index(2),t9.index(2),t10.index(2),t11.index(2),t12.index(2),t13.index(2),t14.index(2)])
 
 table=pd.DataFrame(data=col_total)
+
 my_columns = ['nz','as','in','en','bn','sl','pk','wi','sf','af']
 table.columns = my_columns
 table=table.drop(table.index[0])
 rank=table.rank(axis=1,ascending=False,method='average')
 
+
+winnerDF=pd.DataFrame(data=winner)
+
+win_columns=['as v en','nz v pk','in v wi','sf v sl','pk v af','nz v as','in v en',
+             'sl v wi','in v bn','nz v en','af v wi','bn v pk','in v sl','as v sf']
+winnerDF.columns = win_columns
+winnerDF=winnerDF.drop(winnerDF.index[0])
+
 permut= pd.DataFrame(np.where(rank<=4,1,0))
 permut.columns = my_columns
-km=permut.sum()/permut.count()
+final_prob=permut.sum()/permut.count()
+final_prob
+
+table[(rank['nz']>=5)]
+winnerDF[(rank['nz']>=5)]
+
+
+table.shape        
+table.to_csv("table10.csv")   
+
+winner   
+
+winnerDF1=winnerDF.replace([0,1,2,3,4,5,6,7,8,9],['nz','as','in','en','bn','sl','pk','wi','sf','af'])
+
+winnerDF1[(rank['nz']>=5)].to_csv("nz.csv")
+winnerDF1[(rank['in']>=5)].to_csv("in.csv")
+winnerDF1[(rank['in']<=4)].to_csv("in_win.csv")
+final_probDF=pd.DataFrame(data=final_prob)
+final_probDF.columns=['prob']
+final_probDF["scenario"]=""
+final_probDF["scenario"][0]="nz out if nz loses all AND eng wins all AND sl wins all"
+final_probDF["scenario"][1]="confirmed"
+final_probDF["scenario"][1]="in out if in loses to en AND in loses to sl"
+final_probDF
+
+table
+
+
+
+
+
