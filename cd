@@ -13,35 +13,6 @@ UniqueDF=DF.nunique().sort_values()
 DF['depvar']=DF['isFraud']*1
 DF['depvar'].sum()/DF['depvar'].count()
 
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-for cols in DF.select_dtypes(['float64','int64']).columns:
-    #DF['log_transactionAmount']=np.log(np.maximum(DF['transactionAmount'],.0001))
-    plt.hist(DF[cols], bins=200)
-    plt.ylabel('No of times')
-    plt.xlabel(cols)
-    plt.show()                    
-    #plt.hist(DF[cols][DF['depvar']==0], 20, alpha=0.5, label='No')
-    #plt.hist(DF[cols][DF['depvar']==1], 20, alpha=0.5, label='Yes')
-    #plt.legend(loc='upper right')
-    #plt.ylabel('No of times')
-    #plt.xlabel(cols)
-    #plt.show()
-
-
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-DF=pd.read_json(path_or_buf ="transactions.txt", lines=True)
-Object_describe=DF.describe(include='object')
-Int_describe=DF.describe(include='int')
-Float_describe=DF.describe(include='float')
-Bool_describe=DF.describe(include='bool')
-CountNa=DF.isna().sum()
-UniqueDF=DF.nunique().sort_values()
-
 DF['accountOpenDate_new'] = pd.to_datetime(DF['accountOpenDate'],format='%Y-%m-%d %H:%M:%S',errors='coerce')
 DF['dateOfLastAddressChange_new'] = pd.to_datetime(DF['dateOfLastAddressChange'],format='%Y-%m-%d %H:%M:%S',errors='coerce')
 DF['transactionDateTime_new'] = pd.to_datetime(DF['transactionDateTime'],format='%Y-%m-%d',errors='coerce')
@@ -68,3 +39,35 @@ DF['dateOfLastAddressChange_accountOpenDate']=DF['dateOfLastAddressChange_accoun
 DF['transaction_currentExpDate']=DF['transaction_currentExpDate'].dt.days
 DF['dateOfLastAddressChange_currentExpDate']=DF['dateOfLastAddressChange_currentExpDate'].dt.days
 DF['accountOpenDate_currentExpDate']=DF['accountOpenDate_currentExpDate'].dt.days
+for vars in DF.select_dtypes(include='number').columns:
+    DF[vars+'_bin']=pd.qcut(DF[vars],20, labels=False, retbins=False, duplicates='drop')
+DF['wgt']=1
+DF['depvar_comp']=DF['wgt']-DF['depvar']
+
+
+F_pivot=DF.pivot_table(index='creditLimit',values=['wgt','depvar','depvar_comp'],aggfunc=np.sum)
+DF_pivot['BadRate'] = DF_pivot['depvar'] / DF_pivot['wgt']
+DF_pivot['depvar_comp_share']=DF_pivot['depvar_comp']/DF_pivot['depvar_comp'].sum()
+DF_pivot['depvar_share']=DF_pivot['depvar']/DF_pivot['depvar'].sum()
+DF_pivot['KS']=DF_pivot['depvar']/DF_pivot['depvar'].sum()-DF_pivot['depvar_comp']/DF_pivot['depvar_comp'].sum()
+DF_pivot['variable']='creditLimit'
+DF_pivot['values']=DF_pivot.index
+DF_pivot.reset_index(drop=True,inplace=True)
+DF_pivot.sort_values(by='BadRate',ascending=False)
+DF_pivot
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+width = .35 # width of a bar
+DF_pivot[['depvar_comp_share','depvar_share']].plot(kind='bar', width = width)
+DF_pivot['BadRate'].plot(secondary_y=True)
+
+ax = plt.gca()
+plt.xlim([-width, len(DF_pivot['depvar_comp_share'])-width])
+ax.set_xticklabels((DF_pivot['values']))
+
+plt.title("RnP")
+plt.ylabel("BadRate")
+plt.show()
