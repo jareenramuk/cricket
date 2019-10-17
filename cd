@@ -28,3 +28,43 @@ for cols in DF.select_dtypes(['float64','int64']).columns:
     #plt.ylabel('No of times')
     #plt.xlabel(cols)
     #plt.show()
+
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+DF=pd.read_json(path_or_buf ="transactions.txt", lines=True)
+Object_describe=DF.describe(include='object')
+Int_describe=DF.describe(include='int')
+Float_describe=DF.describe(include='float')
+Bool_describe=DF.describe(include='bool')
+CountNa=DF.isna().sum()
+UniqueDF=DF.nunique().sort_values()
+
+DF['accountOpenDate_new'] = pd.to_datetime(DF['accountOpenDate'],format='%Y-%m-%d %H:%M:%S',errors='coerce')
+DF['dateOfLastAddressChange_new'] = pd.to_datetime(DF['dateOfLastAddressChange'],format='%Y-%m-%d %H:%M:%S',errors='coerce')
+DF['transactionDateTime_new'] = pd.to_datetime(DF['transactionDateTime'],format='%Y-%m-%d',errors='coerce')
+DF['currentExpDate_new'] = pd.to_datetime(DF['currentExpDate'])
+
+DF['transactionDateTime_year']=DF['transactionDateTime_new'].dt.year
+DF['transactionDateTime_month']=DF['transactionDateTime_new'].dt.month
+DF['transactionDateTime_day']=DF['transactionDateTime_new'].dt.day
+DF['transactionDateTime_hour']=DF['transactionDateTime_new'].dt.hour
+DF['transactionDateTime_minute']=DF['transactionDateTime_new'].dt.minute
+DF['transactionDateTime_seconds']=DF['transactionDateTime_new'].dt.second
+DF['transactionDateTime_dayofweek']=DF['transactionDateTime_new'].dt.weekday
+
+DF['account_tenure']=DF['transactionDateTime_new']-DF['accountOpenDate_new']
+DF['address_change_tenure']=DF['transactionDateTime_new']-DF['dateOfLastAddressChange_new']
+DF['dateOfLastAddressChange_accountOpenDate']=DF['dateOfLastAddressChange_new']-DF['accountOpenDate_new']
+DF['transaction_currentExpDate']=DF['currentExpDate_new']-DF['transactionDateTime_new']
+DF['dateOfLastAddressChange_currentExpDate']=DF['currentExpDate_new']-DF['dateOfLastAddressChange_new']
+DF['accountOpenDate_currentExpDate']=DF['currentExpDate_new']-DF['accountOpenDate_new']
+
+DF['account_tenure']=DF['account_tenure'].dt.days
+DF['address_change_tenure']=DF['address_change_tenure'].dt.days
+DF['dateOfLastAddressChange_accountOpenDate']=DF['dateOfLastAddressChange_accountOpenDate'].dt.days
+DF['transaction_currentExpDate']=DF['transaction_currentExpDate'].dt.days
+DF['dateOfLastAddressChange_currentExpDate']=DF['dateOfLastAddressChange_currentExpDate'].dt.days
+DF['accountOpenDate_currentExpDate']=DF['accountOpenDate_currentExpDate'].dt.days
