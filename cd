@@ -211,3 +211,8 @@ def data_vars(df1, target):
 
 ls=[]
 exclude_list = ['confirm_by','confirm_by_split1','confirm_by_split2''cusip','settle_date','trade_date','execution_time','modify_time','portfolio_start_date','auth_time','settlement_cutoff_time_UTC','Buff_prematch_cutoff','Contractual_SD_UTC_cutoff','matching_cutoff_time_UTC']
+
+
+    df['newinvnum1']=(df['fund']!=df['fund'].shift(+1))*1
+    df['cumsum'] = df['newinvnum1'].cumsum()
+    df['newinvnum1']= df.groupby(['cumsum'])['wgt'].cumsum()
