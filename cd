@@ -374,3 +374,135 @@ for vars in DF1.columns:
             plt.title(vars)
             plt.ylabel("FraudRate")
             plt.show()
+            
+            
+            #predictors=['pred_depvartime_1','pred_depvar1time_0','pred_depvar3time_1','pred_depvar5time_1']
+#outtimefeb['depvar'] = outtimefeb['wgt']
+#gbm0 = GradientBoostingClassifier(learning_rate=0.1,random_state=10,n_estimators=100,verbose=1)
+gbm0 = GradientBoostingClassifier(learning_rate=0.1,random_state=10,verbose=1,n_estimators=100,validation_fraction=0.2,min_samples_split=2000,n_iter_no_change=10)
+
+print("block 8")
+train_prob1,test_prob1,val_prob1,feat_imp=modelfit(gbm0,train70pctDF,test30pct,outtimeDF, predictors,printFeatureImportance=True,depvar='depvar')
+print("block 9")
+train_prob1['wgt']=1
+test_prob1['wgt']=1
+val_prob1['wgt']=1
+
+
+#train_prob1.to_csv("/u1/neerkuma/ai_challenge/ads/submissions/train_prob.csv")
+#test_prob1.to_csv("/u1/neerkuma/ai_challenge/ads/submissions_testdummies/test_prob.csv")
+#val_prob1.to_csv("/u1/neerkuma/ai_challenge/ads/submissions/val_prob.csv")
+feat_imp.to_csv('/u1/neerkuma/ai_challenge/ads/oct4/feat_imp.csv')
+
+#test_prob1['Did_Fail']=test_prob1['predicted']
+#test_prob1=test_feb_orig[['fund','invnum']].merge(test_prob1,how='left',on=['fund','invnum'])
+#test_prob1.to_csv('/u1/neerkuma/ai_challenge/ads/oct4/PANK_pred_v27.csv',columns=['Did_Fail'],header='Did_Fail',index=False)
+
+
+gini(train_prob1,'actual','predicted','/u1/neerkuma/ai_challenge/ads/oct4/train_lorenz','wgt')
+gini(test_prob1,'actual','predicted','/u1/neerkuma/ai_challenge/ads/oct4/test_lorenz','wgt')
+gini(val_prob1,'actual','predicted','/u1/neerkuma/ai_challenge/ads/oct4/val_lorenz','wgt')
+
+depVar = 'depvar'
+keyVar = 'key'
+wgtVar = 'wgt'
+def gini(inputDF,actualCol,scoreCol,lbl,wgtCol=None):
+    if wgtCol is None:
+        wgtCol=1
+    binCount = 10
+    binSize = np.ceil(inputDF.shape[0]/binCount)
+    inputDF["wgtScore"] = inputDF[wgtVar]*inputDF[scoreCol]
+    inputDF["wgtActual"] = inputDF[wgtVar]*inputDF[actualCol]
+    
+    inputDF = inputDF.sort_values(by = [actualCol],ascending = False).reset_index(drop=True)
+    inputDF["actcumwgt"] = inputDF[wgtVar].cumsum()
+    inputDF["actualBin"] = np.floor((inputDF.actcumwgt)/binSize)+1
+    
+    inputDF = inputDF.sort_values(by = [scoreCol],ascending = False).reset_index(drop=True)
+    inputDF["scrcumwgt"] = inputDF[wgtVar].cumsum()
+    inputDF["scoreBin"] = np.floor((inputDF.scrcumwgt)/binSize)+1
+    
+    mergedDF = inputDF[wgtCol].groupby(inputDF["actualBin"],as_index=True).sum().to_frame("count")
+    
+    mergedDF["bestMean"] = inputDF["wgtActual"].groupby(inputDF["actualBin"],as_index=True).sum()/mergedDF["count"]
+    mergedDF["respMean"] = inputDF["wgtActual"].groupby(inputDF["scoreBin"],as_index=True).sum()/mergedDF["count"]
+    mergedDF["predMean"] = inputDF["wgtScore"].groupby(inputDF["scoreBin"],as_index=True).sum()/mergedDF["count"]
+    
+    mergedDF["bestPct"] = mergedDF["bestMean"]/mergedDF["bestMean"].sum()
+    mergedDF["respPct"] = mergedDF["respMean"]/mergedDF["respMean"].sum()  
+    
+    mergedDF["bestCumPct"] = mergedDF["bestPct"].cumsum()
+    mergedDF["respCumPct"] = mergedDF["respPct"].cumsum()
+    mergedDF["randomLine"] = mergedDF.index.get_values()/binCount
+    
+    mergedDF["SumAct"] = inputDF["wgtActual"].groupby(inputDF["scoreBin"],as_index=True).sum()
+    mergedDF["SumScr"] = inputDF["wgtScore"].groupby(inputDF["scoreBin"],as_index=True).sum() 
+    
+    mergedDF.to_csv(lbl+".csv")
+    
+    respAUC = np.sum(mergedDF["respCumPct"] - mergedDF["randomLine"])/binCount
+    bestAUC = np.sum(mergedDF["bestCumPct"] - mergedDF["randomLine"])/binCount
+    gini = respAUC/bestAUC
+    
+    accuracy = 1 - np.abs(mergedDF["predMean"] - mergedDF["respMean"]).sum()/mergedDF["respMean"].sum()
+    return ["{0:0.2f}%".format(gini*100),"{0:0.2f}%".format(accuracy*100),"{0:0.2f}%".format(mergedDF['respPct'].values[0]*100)]
+
+def modelfit(alg,dtrain,dtest,dval,predictors, performCV=False, printFeatureImportance=True, cv_folds=2,depvar='depvar'):
+    #Fit the algorithm on the data
+    alg.fit(dtrain[predictors], dtrain[depvar])
+        
+    #Predict training set:
+    dtrain_predictions = alg.predict(dtrain[predictors])
+    dtrain_predprob = alg.predict_proba(dtrain[predictors])[:,1]
+    dtest_predprob = alg.predict_proba(dtest[predictors])[:,1]
+    dval_predprob = alg.predict_proba(dval[predictors])[:,1]
+
+
+    #Perform cross-validation:
+    if performCV:
+        cv_score = cross_validation.cross_val_score(alg, dtrain[predictors], dtrain['depvar'], cv=cv_folds, scoring='roc_auc')
+        #cv_score = cross_val_score(alg, dtrain[predictors], dtrain['depvar'], cv=cv_folds, scoring='roc_auc')
+    
+        #Print model report:
+        print("\nModel Report")
+        print("Accuracy : %.4g" % metrics.accuracy_score(dtrain['depvar'].values, dtrain_predictions))
+        print("AUC Score (Train): %f" % metrics.roc_auc_score(dtrain['depvar'], dtrain_predprob))
+
+    if performCV:
+        print("CV Score : Mean - %.7g | Std - %.7g | Min - %.7g | Max - %.7g" % (np.mean(cv_score),np.std(cv_score),np.min(cv_score),np.max(cv_score)))
+        
+    #Print Feature Importance:
+    if printFeatureImportance:
+        feat_imp = pd.Series(alg.feature_importances_, predictors)
+        feat_imp1=pd.DataFrame(feat_imp)
+        #feat_imp1.to_csv("feat_imp1.csv")
+    #feat_imp.plot(kind='bar', title='Feature Importances')
+    #plt.ylabel('Feature Importance Score'
+
+    np.column_stack((dtest[depvar].values,dtest_predprob))
+    return(pd.DataFrame(np.column_stack((dtrain[depvar].values,dtrain_predprob)),columns=['actual','predicted']),pd.DataFrame(np.column_stack((dtest[depvar].values,dtest_predprob)),columns=['actual','predicted']),pd.DataFrame(np.column_stack((dval[depvar].values,dval_predprob)),columns=['actual','predicted']),feat_imp1)
+    
+    #Step 1 : import all fucntioanlities
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from matplotlib import pyplot as plt
+
+from sklearn.model_selection import train_test_split
+#from sklearn.cross_validation import train_test_split
+from matplotlib import pyplot as plt
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import GradientBoostingClassifier  #GBM algorithm
+#from sklearn import cross_validation, metrics   #Additional scklearn functions
+#from sklearn.grid_search import GridSearchCV   #Perforing grid search
+from sklearn.model_selection import learning_curve, GridSearchCV
+
+import pandas.core.algorithms as algos
+from pandas import Series
+import scipy.stats.stats as stats
+import re
+import traceback
+import string
